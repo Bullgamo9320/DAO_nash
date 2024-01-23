@@ -1,6 +1,7 @@
 module GameResolver
 using ProgressBars
-export AbstractPlayer, Player, SimplifiedPlayer, Game, get_Nash_equilibrium, get_Nash_equilibrium_idx, transform_to_payoff_matrix, strategy_profile
+using Random
+export AbstractPlayer, Player, SimplifiedPlayer, Game, get_Nash_equilibrium, get_Nash_equilibrium_idx, transform_to_payoff_matrix, strategy_profile, create_players, payoff_func
 
 
 #####################################################
@@ -190,5 +191,48 @@ function transform_to_payoff_matrix(payoff_function::Function, my_actions::Actio
     end
     payoff_matrix
 end
+
+import Distributions
+
+# プレイヤーの w_j 値を格納するためのグローバル辞書
+global player_wjs = Dict{Int, Float64}()
+
+function create_players(n)
+    players = Vector{Player}(undef, n)
+    for i in 1:n
+        w_j = rand()
+        player_wjs[i] = w_j  # 辞書に w_j 値を格納
+        players[i] = Player(i, ["stay", "leave"], (my_action, other_actions...) -> payoff_func(i, my_action, other_actions, w_j))
+    end
+    return players
+end
+
+function payoff_func(player_id, my_action, other_actions, w_j)
+    P = 0.5
+    k = 10
+
+    # 他のプレイヤーの w_j 値の合計を計算
+    sum_w = sum([Float64(player_wjs[id]) for id in 1:length(other_actions) if other_actions[id] != "leave" && id != player_id])
+    sum_w -= my_action == "leave" ? w_j : 0.0
+
+    # 以下は以前と同じ
+    if my_action == "stay"
+        return w_j * (P + P) * 10 * w_j + 5 + 13 * (w_j / (sum_w + w_j))^2 + 7 * (w_j / (sum_w + w_j))
+    else  # "leave"
+        return w_j * P - k
+    end
+end
+
+
+
+
+# ナッシュ均衡の計算
+"""
+function find_nash_equilibrium(n)
+    players = create_players(n)
+    game = Game(players)
+    return get_Nash_equilibrium(game)
+end
+"""
 
 end # End of module
