@@ -97,7 +97,7 @@ function create_players(n)
 end
 
 function payoff_func(player_id, my_action, other_actions, w_j)
-    P, k, a, c = 0.5, 10, 0.3, 10000.0
+    P, k, a, c = 0.5, 7, 0.1, 1000000
 
     # 安全に他プレイヤーのw_j取得
     others = [player_wjs[i] for i in 1:length(player_wjs) if i != player_id]
@@ -106,16 +106,14 @@ function payoff_func(player_id, my_action, other_actions, w_j)
     total_w = sum_w + w_j
 
     if my_action == 0.0  # leave
-        return P * 0.7 * w_j - k
+        return P * w_j - k
     elseif my_action == 1.0  # stay
         return w_j * (P * 0.7 + 0.1 * P) + a * P * 0.7 * w_j + c * (w_j / total_w)^2
     elseif my_action == 2.0  # buy
         buy_unit = 0.5 * w_j
         new_wj = w_j + buy_unit
         new_total_w = sum_w + new_wj
-        governance_delta = c * (new_wj / new_total_w)^2 - c * (w_j / total_w)^2
-        marginal_util = buy_unit * (P * 0.7 + 0.1 * P) + a * P * 0.7 * buy_unit
-        return marginal_util + governance_delta - buy_unit * P
+        return new_wj * (P * 0.7 + 0.1 * P) + a * P * 0.7 * new_wj + c * (new_wj / new_total_w)^2 - buy_unit * P - k
     else
         return -1e9
     end

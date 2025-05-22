@@ -8,6 +8,12 @@ function run_dao_game(n::Int)
     alpha, beta = 0.1, 12000.0
     w_values = 2.1e9 * rand(Beta(alpha, beta), n)
 
+    #w_values = rand(Uniform(1e6, 1e8), n)
+
+    # μ, σ = 1.0e8, 2.0e7
+    # w_values = clamp.(rand(Normal(μ, σ), n), 1e6, 2.1e9)
+
+
     players = GameResolver.Player[]
     for i in 1:n
         actions = [0.0, 1.0, 2.0]
@@ -27,8 +33,12 @@ function run_dao_game(n::Int)
     println("\n--- Results ---")
     for i in 1:length(equilibria)
         println("Equilibrium $i:")
-        for (j, action) in enumerate(equilibria[i])
-            wj = GameResolver.player_wjs[j]
+        
+        # プレイヤー情報をw_j付きでまとめて並び替え
+        result = [(j, GameResolver.player_wjs[j], equilibria[i][j]) for j in 1:length(equilibria[i])]
+        sorted_result = sort(result, by = x -> x[2])  # w_j（x[2]）でソート
+        
+        for (j, wj, action) in sorted_result
             label = action == 0.0 ? "leave" : action == 1.0 ? "stay" : "buy"
             println("  Player $j: w_j = $(round(wj, digits=2)), action = $label")
         end
@@ -355,13 +365,13 @@ function DAO_game4(n)
             new_total_w = sum_w + new_wj
 
             # ガバナンス項の差分
-            governance_delta = c * (new_wj / new_total_w)^2 - c * (w_j / total_w)^2
+            governance_delta = c * (new_wj / new_total_w)^2 - c * (w_j / new_total_w)^2
 
             # 将来効用（新たなトークン分）
             marginal_token_util = buy_unit * (P_l + 0.1 * P) + a * P_l * buy_unit
             buy_cost = buy_unit * P
 
-            return marginal_token_util + governance_delta - buy_cost
+            return new_wj * (P_l + 0.1 * P) + a * P_l * new_wj + c * (new_wj / new_total_w)^2 - buy_cost - k
 
         else
             return -1e9  # 不正なアクションに対しては大幅なペナルティ
